@@ -1,0 +1,136 @@
+name: Build native OpenCode for Termux
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Official OpenCode version (this repository is pinned to 1.19.3)"
+        required: true
+        default: "1.19.3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: termux-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      TARGET_VERSION: ${{ inputs.version }}
+      UPSTREAM_REPO: https://github.com/Hope2333/opencode-termux.git
+      UPSTREAM_REF: native-android
+    steps:
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Validate pinned target
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$TARGET_VERSION" != "1.19.3" ]]; then
+            echo "::error::This workflow is intentionally pinned to OpenCode 1.19.3."
+            exit 1
+          fi
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-venv file binutils jq
+          node --version || true
+          npm --version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Fetch upstream transplant pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "$UPSTREAM_REF" "$UPSTREAM_REPO" upstream
+          echo "upstream_commit=$(git -C upstream rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        id: upstream
+
+      - name: Download official OpenCode package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          npm pack "opencode-linux-arm64@$TARGET_VERSION" --pack-destination work
+          TGZ="$(find work -maxdepth 1 -type f -name 'opencode-linux-arm64-*.tgz' -print -quit)"
+          test -n "$TGZ"
+          echo "TGZ=$TGZ" >> "$GITHUB_ENV"
+          tar -tzf "$TGZ" | grep -q 'package/bin/opencode'
+
+      - name: Run native transplant pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 upstream/tools/transplant/transplant.py all \
+            --ver "$TARGET_VERSION" \
+            --tgz "$TGZ" \
+            --no-execve
+          OUT="upstream/artifacts/transplant/$TARGET_VERSION"
+          test -s "$OUT/opencode-native-revived"
+          test -s "$OUT/report.json"
+          cat "$OUT/report.json"
+
+      - name: Verify output metadata and version markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="upstream/artifacts/transplant/$TARGET_VERSION"
+          BIN="$OUT/opencode-native-tui"
+          if [[ ! -s "$BIN" ]]; then
+            BIN="$OUT/opencode-native-revived"
+            echo "::warning::No post-swap opencode-native-tui was produced. Artifact is native, but full TUI compatibility must be verified on a Termux device."
+          fi
+          file "$BIN"
+          readelf -h "$BIN" | tee "$OUT/elf-header.txt"
+          grep -q 'AArch64' "$OUT/elf-header.txt"
+          strings "$BIN" | grep -Fq "$TARGET_VERSION"
+          python3 - "$OUT/report.json" "$TARGET_VERSION" <<'PY'
+          import json, sys
+          p, expected = sys.argv[1:]
+          report = json.load(open(p, encoding="utf-8"))
+          actual = str(report.get("ver", ""))
+          if actual != expected:
+              raise SystemExit(f"transplant report version mismatch: {actual!r} != {expected!r}")
+          print(f"transplant report version OK: {actual}")
+          print("steps:", ", ".join(report.get("steps", {}).keys()))
+          PY
+          cp "$BIN" ./opencode-native
+          chmod 755 ./opencode-native
+          sha256sum ./opencode-native > SHA256SUMS
+          cp "$OUT/report.json" ./transplant-report.json
+          printf 'OpenCode version: %s\nUpstream transplant repository: %s\nUpstream commit: %s\n' \
+            "$TARGET_VERSION" "$UPSTREAM_REPO" "${{ steps.upstream.outputs.upstream_commit }}" > BUILD-INFO.txt
+
+      - name: Assemble installable artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/scripts
+          cp opencode-native SHA256SUMS transplant-report.json BUILD-INFO.txt dist/
+          cp install-termux.sh dist/
+          cp scripts/termux-launcher.sh dist/scripts/
+          chmod 755 dist/install-termux.sh dist/scripts/termux-launcher.sh
+          tar -czf "opencode-termux-v$TARGET_VERSION.tar.gz" -C dist .
+          sha256sum "opencode-termux-v$TARGET_VERSION.tar.gz" > "opencode-termux-v$TARGET_VERSION.tar.gz.sha256"
+
+      - name: Upload native binary and report
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-termux-v${{ inputs.version }}
+          path: |
+            opencode-termux-v${{ inputs.version }}.tar.gz
+            opencode-termux-v${{ inputs.version }}.tar.gz.sha256
+            upstream/artifacts/transplant/${{ inputs.version }}/report.json
+          if-no-files-found: error
+          retention-days: 30
