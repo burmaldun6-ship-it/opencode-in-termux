@@ -52,14 +52,14 @@ no proot, chroot, Ubuntu, Debian userspace, or glibc installation is needed.
 
 The launcher sets:
 - `OPENCODE_DISABLE_AUTOUPDATE=1` — disables automatic update checks;
-- `OPENCODE_DISABLE_MODELS_FETCH=1` — disables background remote model-catalog fetches;
 - `OTEL_SDK_DISABLED=true`, `OTEL_TRACES_EXPORTER=none`,
   `OTEL_LOGS_EXPORTER=none`, and `OTEL_METRICS_EXPORTER=none` — disables
   standard OpenTelemetry SDK exporters.
 
 It creates a minimal config with `autoupdate: false` and
 `experimental.openTelemetry: false` only if you do not already have an
-OpenCode config. It never overwrites an existing user config.
+OpenCode config. Model/provider discovery remains enabled so OpenCode's
+built-in keyless/free provider can still appear when available. It never overwrites an existing user config.
 
 This is a **runtime privacy hardening layer**, not a claim that every telemetry
 code path was removed from the compiled machine code. Requests to your chosen
