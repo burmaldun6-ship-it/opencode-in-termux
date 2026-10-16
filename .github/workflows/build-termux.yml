@@ -6,7 +6,7 @@ on:
     paths:
       - ".github/workflows/build-termux.yml"
       - "install-termux.sh"
-      - "scripts/termux-launcher.sh"
+      - "scripts/**"
   workflow_dispatch:
     inputs:
       version:
@@ -113,6 +113,7 @@ jobs:
 
           strings -a opencode-native | grep -Fq "$TARGET_VERSION"
           strings -a opencode-native | grep -Fq 'libopentui.so'
+          python3 scripts/verify-native-elf.py opencode-native | tee tui-elf-check.json
           sha256sum opencode-native
 
       - name: Write build provenance report
@@ -151,6 +152,8 @@ jobs:
                 elf_machine: "AArch64",
                 elf_interpreter: $interpreter,
                 main_elf_glibc_needed: false,
+                embedded_opentui_glibc_needed: false,
+                embedded_opentui_elf: "parsed and verified as Android/Bionic",
                 embedded_version_marker: "passed",
                 embedded_opentui_marker: "passed"
               },
@@ -168,7 +171,7 @@ jobs:
           set -euo pipefail
           mkdir -p dist/scripts
           cp opencode-native SHA256SUMS BUILD-INFO.txt build-report.json \
-            source-release-SHA256SUMS source-versions.json \
+            source-release-SHA256SUMS source-versions.json tui-elf-check.json \
             elf-file.txt elf-header.txt elf-program-headers.txt elf-dynamic.txt dist/
           cp install-termux.sh dist/
           cp scripts/termux-launcher.sh dist/scripts/
@@ -187,5 +190,6 @@ jobs:
             elf-header.txt
             elf-program-headers.txt
             elf-dynamic.txt
+            tui-elf-check.json
           if-no-files-found: error
           retention-days: 30
