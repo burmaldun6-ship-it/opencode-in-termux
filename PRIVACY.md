@@ -8,11 +8,13 @@ that caused the earlier transplant artifact to crash at TUI startup.
 
 The launcher sets:
 - `OPENCODE_DISABLE_AUTOUPDATE=1`
-- `OPENCODE_DISABLE_MODELS_FETCH=1`
 - `OTEL_SDK_DISABLED=true`
 - `OTEL_TRACES_EXPORTER=none`
 - `OTEL_LOGS_EXPORTER=none`
 - `OTEL_METRICS_EXPORTER=none`
+
+Model/provider discovery is intentionally left enabled. Disabling model fetching
+can hide OpenCode's built-in keyless/free provider or its model catalog.
 
 When no config file exists, it writes `autoupdate: false` and
 `experimental.openTelemetry: false`. It does not overwrite an existing
