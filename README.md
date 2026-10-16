@@ -32,7 +32,7 @@ Download and extract the Actions artifact on your phone, then from its directory
 
 ```bash
 pkg update
-pkg install coreutils
+pkg install coreutils libc++
 bash install-termux.sh ./opencode-native
 ```
 
