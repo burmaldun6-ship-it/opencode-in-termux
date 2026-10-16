@@ -1,6 +1,12 @@
 name: Build native OpenCode for Termux
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/build-termux.yml"
+      - "install-termux.sh"
+      - "scripts/termux-launcher.sh"
   workflow_dispatch:
     inputs:
       version:
