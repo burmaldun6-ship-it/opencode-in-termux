@@ -182,7 +182,7 @@ jobs:
           name: opencode-termux-v${{ github.event.inputs.version || '1.19.3' }}
           path: |
             opencode-termux-v${{ github.event.inputs.version || '1.19.3' }}.tar.gz
-            opencode-termux-v${{ inputs.version }}.tar.gz.sha256
+            opencode-termux-v${{ github.event.inputs.version || '1.19.3' }}.tar.gz.sha256
             build-report.json
             elf-header.txt
             elf-program-headers.txt
