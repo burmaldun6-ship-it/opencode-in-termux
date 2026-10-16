@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      TARGET_VERSION: ${{ inputs.version }}
+      TARGET_VERSION: ${{ github.event.inputs.version || '1.19.3' }}
       NATIVE_BUILD_REPO: bd-loser/opencode-bionic
       NATIVE_BUILD_COMMIT: 52c794391531fe18469bcb435ba910057161b4a8
       OPENTUI_NATIVE_VERSION: "0.5.17"
@@ -179,9 +179,9 @@ jobs:
       - name: Upload verified native binary package
         uses: actions/upload-artifact@v4
         with:
-          name: opencode-termux-v${{ inputs.version }}
+          name: opencode-termux-v${{ github.event.inputs.version || '1.19.3' }}
           path: |
-            opencode-termux-v${{ inputs.version }}.tar.gz
+            opencode-termux-v${{ github.event.inputs.version || '1.19.3' }}.tar.gz
             opencode-termux-v${{ inputs.version }}.tar.gz.sha256
             build-report.json
             elf-header.txt
