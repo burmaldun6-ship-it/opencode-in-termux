@@ -18,8 +18,8 @@ if [[ ! -f "$LAUNCHER" ]]; then
   echo "ERROR: launcher script missing: $LAUNCHER" >&2
   exit 1
 fi
-if [[ -n "${ANDROID_VERSION:-}" ]] && (( ANDROID_VERSION < 9 )); then
-  echo "ERROR: Android 9/API 28 or newer is required by the native build." >&2
+if [[ -n "${ANDROID_VERSION:-}" ]] && (( ANDROID_VERSION < 10 )); then
+  echo "ERROR: Android 10/API 29 or newer is required by the native build." >&2
   exit 1
 fi
 
