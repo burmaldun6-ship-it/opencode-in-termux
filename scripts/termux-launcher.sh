@@ -11,10 +11,10 @@ if [ ! -x "$NATIVE" ]; then
   exit 127
 fi
 
-# Privacy defaults: no automatic update checks, no background model catalogue
-# refresh, and no standard OpenTelemetry SDK exporters.
+# Privacy defaults: disable automatic update checks and standard OpenTelemetry
+# exporters. Keep model-catalog fetching enabled: the built-in keyless/free
+# OpenCode provider depends on the normal provider/model discovery flow.
 export OPENCODE_DISABLE_AUTOUPDATE=1
-export OPENCODE_DISABLE_MODELS_FETCH=1
 export OTEL_SDK_DISABLED=true
 export OTEL_TRACES_EXPORTER=none
 export OTEL_LOGS_EXPORTER=none
